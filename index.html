@@ -95,6 +95,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--a);box-s
 .remcard{border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:8px;background:#fff}
 .q{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;margin-top:12px}
 details.q>summary{list-style:none}details.q>summary::-webkit-details-marker{display:none}details.q[open]>summary{margin-bottom:8px}
+.kpibtn{font:inherit;color:inherit;cursor:pointer;border:1px solid var(--line)}.kpibtn:hover,.kpibtn:focus-visible{border-color:var(--th,#5b3fa8)}
+.histlink{color:inherit;text-decoration:none;cursor:pointer}.histlink:hover,.histlink:focus-visible{background:var(--soft,rgba(91,63,168,.08));outline:none}
 .q.res-correct{border-color:#7bc99a;background:#fbfffc}
 .q.res-wrong{border-color:#eba0a0;background:#fffafa}
 .q.res-review{border-color:#e8c27a;background:#fffdf7}
@@ -172,7 +174,7 @@ th{background:var(--soft);font-size:12px;text-transform:uppercase;letter-spacing
 .pod .medal{font-size:30px;line-height:1}.pod b{display:block;font-size:17px;margin-top:4px}.pod .sc{font-size:26px;font-weight:800;color:var(--a);font-variant-numeric:tabular-nums}
 .pod.r1{border-color:#f5b301;background:linear-gradient(#fffaf0,#fff)}.pod.r2{border-color:#9ca3af}.pod.r3{border-color:#c2824a}
 .rank{display:grid;grid-template-columns:30px 1fr auto;gap:8px;align-items:center;padding:8px 2px;border-top:1px solid var(--line);font-size:14px}
-.rank.hist{grid-template-columns:88px 1fr auto}.rank:first-of-type{border-top:0}.rank .n{font-weight:800;color:var(--mut)}
+.rank.hist{grid-template-columns:118px 1fr auto}@media(max-width:480px){.rank.hist{grid-template-columns:1fr auto}.rank.hist>span.mut{grid-column:1/-1;font-size:12px}}.rank:first-of-type{border-top:0}.rank .n{font-weight:800;color:var(--mut)}
 .lc{width:100%;height:auto;display:block}.lc text{fill:var(--mut);font-size:10px}
 .lc .gridl{stroke:var(--line);stroke-width:1}.lc .thr{stroke:#dc2626;stroke-width:1;stroke-dasharray:4 3}
 .lc .ln{fill:none;stroke:var(--a);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}.lc .pt{fill:#fff;stroke:var(--a);stroke-width:2}
@@ -355,7 +357,7 @@ async function route() {
     if (!parts.length) return viewHome();
     if (parts[0] === 'ex') return viewExercise(parts[1]);
     if (parts[0] === 'hof') return viewHof(parts[1] || '');
-    if (parts[0] === 'me') return viewMe();
+    if (parts[0] === 'me') return parts[1] ? viewMyResult(parts[1]) : viewMe();
     if (GRADES[parts[0]]) { if (parts[1]) return viewGrade(parts[0], Number(parts[1])); return viewLevel(parts[0]); }
     viewHome();
   } catch (e) {
@@ -569,12 +571,14 @@ function analysisHtml(res) {
 function renderResult(res) {
   const ex = S.ex, c = res.counts, byId = {}; res.results.forEach(r => byId[r.id] = r);
   const pct = res.scorePct, weak = pct < 70;
-  const emailCls = { sent: 'ok', queued: 'ok', demo: 'warn', duplicate: 'info' }[res.email.status] || 'warn';
+  const emailCls = { sent: 'ok', queued: 'ok', demo: 'warn', duplicate: 'info' }[(res.email || {}).status] || 'warn';
   window.scrollTo(0, 0);
   app.innerHTML = demoBanner() + `
-  <div class="hero" style="margin-top:10px"><div class="eyebrow">Đã nộp bài</div><h1>${esc(S.info.name)} · Lớp ${esc(S.info.cls)}</h1><p>${esc(ex.title)}</p></div>
-  <div class="notice ${emailCls}" role="status"><b>Bài đã được ghi nhận.</b> ${esc(res.email.message)}${res.submissionId ? `<br><span class="mut">Mã bài làm: ${esc(res.submissionId)}</span>` : ''}</div>
-  ${profileNote(res)}
+  ${res.past ? crumbs({ t: 'Trang chủ', href: '#/' }, { t: 'Hồ sơ của em', href: '#/me' }, { t: ex.title }) : ''}
+  <div class="hero" style="margin-top:10px"><div class="eyebrow">${res.past ? 'Bài em đã làm' : 'Đã nộp bài'}</div><h1>${esc(S.info.name)} · Lớp ${esc(S.info.cls)}</h1><p>${esc(ex.title)}</p></div>
+  ${res.past ? `<div class="notice info" role="status">Em nộp bài này lúc <b>${esc(res.time)}</b>${res.sec ? ` · làm trong ${Math.max(1, Math.round(res.sec / 60))} phút` : ''}.<br><span class="mut">Mã bài làm: ${esc(res.submissionId)}</span></div>`
+    : `<div class="notice ${emailCls}" role="status"><b>Bài đã được ghi nhận.</b> ${esc(res.email.message)}${res.submissionId ? `<br><span class="mut">Mã bài làm: ${esc(res.submissionId)}</span>` : ''}</div>
+  ${profileNote(res)}`}
   <div class="stats"><div class="stat"><b>${pct}%</b><span>Chính xác</span></div><div class="stat"><b>${c.correct}/${c.total}</b><span>Câu đúng</span></div><div class="stat"><b>${c.wrong}</b><span>Câu sai</span></div><div class="stat"><b>${c.blank}</b><span>Bỏ trống</span></div>${c.review ? `<div class="stat"><b>${c.review}</b><span>Chờ GV chấm</span></div>` : ''}</div>
   ${c.review ? '<div class="notice info">Điểm hiện chưa gồm các câu chờ giáo viên chấm.</div>' : ''}
   ${analysisHtml(res)}
@@ -602,7 +606,7 @@ function renderResult(res) {
     const inner = `<div class="prompt">${fmt(q.prompt)}</div>${body}<div class="fb ${label[0]}"><b>${label[1]}</b>${show}${exp}</div>`;
     if (r.status === 'correct' && res.revealed) return `<details class="q ${cls}"><summary style="cursor:pointer">${head}<span class="mut" style="font-size:13px">Đúng · bấm để xem lời giải</span></summary>${inner}</details>`;
     return `<section class="q ${cls}">${head}${inner}</section>`; }).join('')}
-  <div class="row" style="margin-top:16px">${(res.remedials || [])[0] ? `<a class="btn" href="#/ex/${esc(res.remedials[0].id)}">Làm bài bổ trợ: ${esc(res.remedials[0].topic)}</a>` : ''}<a class="btn ${(res.remedials || [])[0] ? 'ghost' : ''}" href="#/me">Xem hồ sơ của em</a><a class="btn ghost" href="#/${ex.level}/${ex.grade}">Chọn bài khác</a><a class="btn ghost" href="#/">Trang chủ</a></div>`;
+  <div class="row" style="margin-top:16px">${(res.remedials || [])[0] ? `<a class="btn" href="#/ex/${esc(res.remedials[0].id)}">Làm bài bổ trợ: ${esc(res.remedials[0].topic)}</a>` : ''}<a class="btn ${(res.remedials || [])[0] ? 'ghost' : ''}" href="#/me">${res.past ? '← Về hồ sơ của em' : 'Xem hồ sơ của em'}</a><a class="btn ghost" href="#/${ex.level}/${ex.grade}">Chọn bài khác</a><a class="btn ghost" href="#/">Trang chủ</a></div>`;
 }
 
 /* ============ SỰ KIỆN CHUNG ============ */
@@ -1189,7 +1193,22 @@ async function meLogin(create) {
   if (!email || !pin) return meForm('Em nhập đủ email và PIN nhé.');
   let r; try { r = await api({ action: 'profile', email, pin, create: !!create }); } catch (e) { return meForm('Không kết nối được máy chủ.'); }
   if (!r.ok) { return meForm(r.code === 'no_pin' ? 'Email này chưa có PIN. Bấm “Tạo PIN này” để dùng PIN em vừa nhập.' : r.error, r.code === 'no_pin'); }
-  store.set('elh_email', email); ME = { email, pin: '', data: r }; meRender();
+  store.set('elh_email', email); const next = ME.next; ME = { email, pin, data: r }; if (next) { if (location.hash === '#/me/' + next) viewMyResult(next); else location.hash = '#/me/' + next; return; } meRender();
+}
+async function viewMyResult(sid) {
+  document.body.dataset.zone = 'me';
+  if (DEMO) { app.innerHTML = '<div class="notice warn">Hồ sơ cần kết nối máy chủ.</div>'; return; }
+  if (!ME.email || !ME.pin) { ME.next = sid; return meForm('Em đăng nhập bằng email và PIN để xem lại bài này.'); }
+  app.innerHTML = '<div class="empty">Đang tải bài làm…</div>';
+  let r; try { r = await api({ action: 'myResult', email: ME.email, pin: ME.pin, id: sid }); } catch (e) { app.innerHTML = '<div class="notice bad">Không kết nối được máy chủ. Em thử tải lại trang.</div>'; return; }
+  if (!r.ok) {
+    if (r.code === 'auth') { ME.pin = ''; ME.data = null; ME.next = sid; return meForm(r.error); }
+    app.innerHTML = crumbs({ t: 'Trang chủ', href: '#/' }, { t: 'Hồ sơ của em', href: '#/me' }) + `<div class="notice bad" style="margin-top:10px">${esc(r.error)}</div><div class="row"><a class="btn ghost" href="#/me">← Về hồ sơ của em</a></div>`; return;
+  }
+  const flags = {}; (r.flags || []).forEach(id => { flags[id] = true; });
+  document.body.dataset.zone = r.ex.level || 'me';
+  S = { ex: r.ex, answers: r.answers || {}, flags, info: { name: r.name, cls: r.cls }, done: true, rightsOrder: {}, timer: null };
+  renderResult(Object.assign({}, r, { past: true }));
 }
 function meRender() {
   const d = ME.data;
@@ -1197,18 +1216,19 @@ function meRender() {
   const ch = d.change == null ? '—' : (d.change > 0 ? '+' : '') + d.change + '%';
   const weak = d.topics.filter(x => x.level === 'weak'), strong = d.topics.filter(x => x.level === 'strong'), watch = d.topics.filter(x => x.level === 'watch');
   app.innerHTML = crumbs({ t: 'Trang chủ', href: '#/' }, { t: 'Hồ sơ của em' }) + `<div class="hero" style="margin-top:10px"><div class="eyebrow">Hồ sơ cá nhân</div><h1>${esc(d.name)} · Lớp ${esc(d.cls)}</h1><p>Mỗi lần làm bài là một bước tiến. Cố lên nhé!</p></div>
-  <div class="kpis"><div class="kpi"><b>${d.attempts}</b><span>Lượt nộp</span></div><div class="kpi"><b>${d.exercises}</b><span>Bài đã làm</span></div><div class="kpi"><b>${d.avg}%</b><span>Điểm trung bình</span></div><div class="kpi"><b>${d.best}%</b><span>Cao nhất</span></div><div class="kpi"><b>${d.streak}</b><span>Ngày liên tiếp</span></div><div class="kpi"><b style="color:${d.change > 0 ? 'var(--ok)' : d.change < 0 ? 'var(--bad)' : 'inherit'}">${ch}</b><span>So với lúc đầu</span></div></div>
+  <div class="kpis"><div class="kpi"><b>${d.attempts}</b><span>Lượt nộp</span></div><button type="button" class="kpi kpibtn" data-act="mehist"><b>${d.exercises}</b><span>Bài đã làm ›</span></button><div class="kpi"><b>${d.avg}%</b><span>Điểm trung bình</span></div><div class="kpi"><b>${d.best}%</b><span>Cao nhất</span></div><div class="kpi"><b>${d.streak}</b><span>Ngày liên tiếp</span></div><div class="kpi"><b style="color:${d.change > 0 ? 'var(--ok)' : d.change < 0 ? 'var(--bad)' : 'inherit'}">${ch}</b><span>So với lúc đầu</span></div></div>
+  <div class="panel" id="meHistory"><h3 style="margin:0">Các bài em đã làm</h3><div class="mut">${d.attempts} lượt nộp · ${d.exercises} bài khác nhau. Bấm vào một bài để xem lại kết quả và lời giải.</div>${d.history.map(x => `<a class="rank hist histlink" href="#/me/${encodeURIComponent(x.sid || '')}"><span class="mut">${esc(x.t)}</span><span>${esc(x.title)}${x.total ? ` <span class="mut">· ${x.correct}/${x.total} câu</span>` : ''}</span><b style="color:${x.score >= 70 ? 'var(--ok)' : 'var(--bad)'}">${x.score}% ›</b></a>`).join('')}</div>
   <div class="panel"><h3 style="margin:0">Điểm qua các lần làm bài</h3><div class="mut">Đường đỏ đứt nét là mốc 70%</div>${lineChart(d.trend.map(x => ({ l: x.d, v: x.score, t: x.title })), 'Điểm qua các lần làm bài')}</div>
   <div class="two-col"><div class="panel"><h3 style="margin:0">Mạnh / yếu theo chủ đề</h3><div class="bars">${barRows(d.topics)}</div><div class="mut" style="font-size:12px">Tính trên tất cả bài đã làm · Xanh: vững · Vàng: cần củng cố · Đỏ: cần bổ trợ</div>
    ${weak.length ? `<p><b style="color:var(--bad)">Cần bổ trợ:</b> ${weak.map(x => esc(x.name)).join(', ')}.</p>` : '<p>Em chưa có chủ đề nào cần bổ trợ gấp. Rất tốt!</p>'}${watch.length ? `<p><b style="color:#b45309">Nên xem lại thêm:</b> ${watch.map(x => esc(x.name)).join(', ')}.</p>` : ''}${strong.length ? `<p><b style="color:var(--ok)">Điểm mạnh:</b> ${strong.map(x => esc(x.name)).join(', ')}.</p>` : ''}</div>
    <div class="panel"><h3 style="margin:0">Bài bổ trợ gợi ý</h3>${d.remedials.length ? d.remedials.map(x => `<div class="remcard"><div class="mut" style="font-size:12px">Vì em còn yếu: ${esc(x.topic)}</div><b>${esc(x.title)}</b>${x.objectives ? `<div>Làm xong em sẽ: ${esc(x.objectives)}</div>` : ''}<div style="margin-top:8px"><a class="btn sm" href="#/ex/${esc(x.id)}">Làm bài bổ trợ ngay</a></div></div>`).join('') : '<div class="empty">Chưa có bài bổ trợ phù hợp.</div>'}</div></div>
-  <div class="panel"><h3 style="margin:0">Lịch sử gần đây</h3>${d.history.map(x => `<div class="rank hist"><span class="mut">${esc(x.t)}</span><span>${esc(x.title)}</span><b style="color:${x.score >= 70 ? 'var(--ok)' : 'var(--bad)'}">${x.score}%</b></div>`).join('')}</div>
   <div class="row end" style="margin-top:14px"><button class="btn ghost" data-act="melogout">Đăng xuất</button></div>`;
 }
 document.addEventListener('submit', e => { if (e.target.id === 'meForm') { e.preventDefault(); meLogin(false); } });
 document.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.act === 'mecreate') meLogin(true);
+  if (b.dataset.act === 'mehist') { const h = document.getElementById('meHistory'); if (h) h.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   if (b.dataset.act === 'melogout') { ME = { email: '', pin: '', data: null }; meForm(''); }
 });
 
