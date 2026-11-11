@@ -211,6 +211,8 @@ th{background:var(--soft);font-size:12px;text-transform:uppercase;letter-spacing
 const API_URL = "https://script.google.com/macros/s/AKfycbypGHDGC-Mmcw7lA5BX1tLtM3T_kDonbv55FvNSKyV07SQFLDzLMzTDfp6WzwZV_C2w/exec";
 
 const DEMO = !API_URL;
+const CLASSES = ['9A', '9B', '10A', '10B', '11A', '11B', '12A', '12B', '12C'];
+const clsFor = g => { const l = CLASSES.filter(c => new RegExp('^' + g + '[A-Z]$').test(c)); return l.length ? l : CLASSES; };
 const GRADES = { THCS: [6, 7, 8, 9], THPT: [10, 11, 12] };
 const SKILL = { vocabulary: 'Vocabulary', grammar: 'Grammar' };
 const QTYPE = { mcq: 'Trắc nghiệm', fill: 'Điền từ', wordform: 'Word formation', error: 'Tìm lỗi sai', transform: 'Viết lại câu', match: 'Nối', short: 'Trả lời ngắn' };
@@ -427,7 +429,7 @@ function viewExercise(id) {
   ${(ex.grammarPoints && ex.grammarPoints.length) || ex.objectives ? `<div class="panel">${ex.grammarPoints && ex.grammarPoints.length ? `<div class="hd" style="margin-top:0">Điểm ngữ pháp cần lưu ý</div><ul class="gp">${ex.grammarPoints.map(g => `<li>${fmt(g)}</li>`).join('')}</ul>` : ''}${ex.objectives ? `<div class="hd">Làm xong em sẽ</div><div>${fmt(ex.objectives)}</div>` : ''}</div>` : ''}
   <form class="panel dash" id="infoForm" novalidate>
    <div class="two"><div><label class="f" for="sName">Họ và tên học sinh *</label><input type="text" id="sName" autocomplete="name" placeholder="Ví dụ: Nguyễn Minh Anh" value="${esc(store.get('elh_name'))}" required></div>
-   <div><label class="f" for="sClass">Lớp *</label><input type="text" id="sClass" placeholder="Ví dụ: ${ex.grade}A1" value="${esc(store.get('elh_class'))}" required></div></div>
+   <div><label class="f" for="sClass">Lớp *</label><select id="sClass" required><option value="">— Chọn lớp —</option>${clsFor(ex.grade).map(c => `<option ${c === store.get('elh_class') ? 'selected' : ''}>${c}</option>`).join('')}</select></div></div>
    <div style="margin-top:10px"><label class="f" for="sEmail">Email của em * (để nhận đáp án, đánh giá mạnh/yếu và bài bổ trợ)</label><input type="email" id="sEmail" autocomplete="email" placeholder="ten@gmail.com" value="${esc(store.get('elh_email'))}" required></div>
    <div class="two" style="margin-top:10px"><div><label class="f" for="sPin">PIN 4 số (tùy chọn, để xem hồ sơ tiến bộ của em)</label><input type="password" id="sPin" inputmode="numeric" maxlength="4" pattern="[0-9]*" autocomplete="off" placeholder="Ví dụ: 1234"></div>
    <div style="align-self:end"><label class="opt" style="margin:0"><input type="checkbox" id="sHide" ${store.get('elh_hide') ? 'checked' : ''}><span>Không hiện tên em trên bảng vinh danh</span></label></div></div>
@@ -438,7 +440,7 @@ function viewExercise(id) {
 }
 function startExercise() {
   const name = $('#sName').value.trim(), cls = $('#sClass').value.trim(), em = $('#sEmail').value.trim();
-  const err = !name ? 'Vui lòng nhập họ và tên.' : !cls ? 'Vui lòng nhập lớp.' : (!em && !DEMO) ? 'Vui lòng nhập email để nhận đáp án và đánh giá.' : (em && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) ? 'Email chưa đúng định dạng.' : '';
+  const err = !name ? 'Vui lòng nhập họ và tên.' : !cls ? 'Vui lòng chọn lớp.' : (!em && !DEMO) ? 'Vui lòng nhập email để nhận đáp án và đánh giá.' : (em && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) ? 'Email chưa đúng định dạng.' : '';
   if (err) { $('#infoErr').innerHTML = `<div class="notice bad" role="alert">${err}</div>`; return; }
   const pin = ($('#sPin') ? $('#sPin').value : '').trim(), hide = !!($('#sHide') && $('#sHide').checked);
   if (pin && !/^\d{4}$/.test(pin)) { $('#infoErr').innerHTML = '<div class="notice bad" role="alert">PIN gồm đúng 4 chữ số (hoặc để trống).</div>'; return; }
@@ -1242,7 +1244,7 @@ async function admLoadDash() {
 function admDash() {
   const D = ADM.dash.data, f = ADM.dash.f, exs = ADM.content.exercises;
   const filters = `<div class="filters2"><div><label for="dfEx">Bài tập</label><select id="dfEx"><option value="">Tất cả bài</option>${exs.map(e => `<option value="${esc(e.id)}" ${e.id === f.exerciseId ? 'selected' : ''}>${esc(e.title)}</option>`).join('')}</select></div>
-   <div><label for="dfCls">Lớp</label><select id="dfCls"><option value="">Tất cả lớp</option>${((D && D.classList) || (f.cls ? [f.cls] : [])).map(c => `<option ${c === f.cls ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
+   <div><label for="dfCls">Lớp</label><select id="dfCls"><option value="">Tất cả lớp</option>${CLASSES.map(c => `<option ${c === f.cls ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
    <div><label for="dfFrom">Từ ngày</label><input type="date" id="dfFrom" value="${esc(f.from)}"></div><div><label for="dfTo">Đến ngày</label><input type="date" id="dfTo" value="${esc(f.to)}"></div>
    <button class="btn" data-adm="dashgo">Xem</button><button class="btn ghost" data-adm="dashclear">Xóa lọc</button></div>`;
   if (!D) return filters + '<div class="empty">Đang tính toán…</div>';
